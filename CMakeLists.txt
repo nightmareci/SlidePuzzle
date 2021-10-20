@@ -18,6 +18,20 @@ set(EXE_SOURCES
 add_executable(${EXE} ${EXE_SOURCES})
 target_include_directories(${EXE} PRIVATE ${CMAKE_SOURCE_DIR})
 
+if(MSVC)
+	target_link_options(${EXE}
+		PRIVATE
+			$<$<NOT:$<CONFIG:Debug>>:
+				/ENTRY:mainCRTStartup
+				/SUBSYSTEM:WINDOWS
+			>
+	)
+	set_target_properties(${EXE} PROPERTIES
+		VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+		VS_STARTUP_PROJECT ${CMAKE_PROJECT_NAME}
+	)
+endif()
+
 if(VCPKG_TOOLCHAIN)
 	find_package(SDL2 REQUIRED)
 	find_package(sdl2-image REQUIRED)

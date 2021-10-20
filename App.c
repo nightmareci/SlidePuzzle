@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 			 * try again until it isn't solved. The permuting function doesn't
 			 * guarantee the puzzle is not in the solved state. */
 			do {
-				SPUZ_Permute(&p, time(NULL));
+				SPUZ_Permute(&p, (unsigned)time(NULL));
 			} while (SPUZ_Solved(&p));
 
 			NewGame = 0;
@@ -62,6 +62,7 @@ int main(int argc, char** argv) {
 	}
 
 	Quit(NULL);
+	return 0;
 }
 
 void Init(void) {

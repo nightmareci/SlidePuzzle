@@ -3,8 +3,8 @@
 #include <stdlib.h>
 
 void SPUZ_Init(SPUZ_Board* p) {
-	for (size_t j = 0; j < SPUZ_BOARD_H; j++) {
-		for (size_t i = 0; i < SPUZ_BOARD_W; i++) {
+	for (int j = 0; j < SPUZ_BOARD_H; j++) {
+		for (int i = 0; i < SPUZ_BOARD_W; i++) {
 			p->panels[j][i] = i + (SPUZ_BOARD_W * j) + 1;
 		}
 	}
@@ -16,7 +16,7 @@ void SPUZ_Init(SPUZ_Board* p) {
 	return;
 }
 
-void SPUZ_Permute(SPUZ_Board* p, unsigned int seed) {
+void SPUZ_Permute(SPUZ_Board* p, unsigned seed) {
 	/* Reading the "Solvability" section in the "Fifteen puzzle" article on
 	 * Wikipedia, I noticed one can use the criteria for solvability to
 	 * easily randomize the puzzle, and guarantee solvability. Those
@@ -40,8 +40,8 @@ void SPUZ_Permute(SPUZ_Board* p, unsigned int seed) {
 
 	/* First find the empty square, resetting the coordinates in the SPUZ_Board
 	 * struct. */
-	for (size_t j = 0; j < SPUZ_BOARD_H; j++) {
-		for (size_t i = 0; i < SPUZ_BOARD_W; i++) {
+	for (int j = 0; j < SPUZ_BOARD_H; j++) {
+		for (int i = 0; i < SPUZ_BOARD_W; i++) {
 			if (p->panels[j][i] == 0) {
 				p->emptyX = i;
 				p->emtpyY = j;
@@ -50,6 +50,7 @@ void SPUZ_Permute(SPUZ_Board* p, unsigned int seed) {
 		}
 	}
 FOUND_EMPTY:
+	;
 
 	/* Next check the parity of the taxicab distance the empty square
 	 * moved, and if odd, permute two non-empty panels. */
@@ -59,9 +60,9 @@ FOUND_EMPTY:
 	if (dy < 0) dy = -dy;
 
 	if ((dx + dy) % 2) {
-		a = rand() % 15;
+		a = rand() % (SPUZ_BOARD_H * SPUZ_BOARD_W - 1);
 		int b;
-		while ((b = rand() % (SPUZ_BOARD_H * SPUZ_BOARD_W)) == a);
+		while ((b = rand() % (SPUZ_BOARD_H * SPUZ_BOARD_W - 1)) == a);
 		int c = p->emptyX + 4 * p->emtpyY;
 		if (a >= c) a++;
 		if (b >= c) b++;
@@ -74,9 +75,9 @@ FOUND_EMPTY:
 }
 
 void SPUZ_Print(SPUZ_Board* p) {
-	for (size_t j = 0; j < SPUZ_BOARD_H; j++) {
+	for (int j = 0; j < SPUZ_BOARD_H; j++) {
 		printf("|");
-		for (size_t i = 0; i < SPUZ_BOARD_W; i++) {
+		for (int i = 0; i < SPUZ_BOARD_W; i++) {
 			printf("%2d|", p->panels[j][i]);
 		}
 		printf("\n");
@@ -147,7 +148,7 @@ bool SPUZ_Solved(SPUZ_Board* p) {
 		solved = false;
 	}
 	else {
-		for (size_t i = 0; i < (SPUZ_BOARD_W * SPUZ_BOARD_H) - 2; i++) {
+		for (int i = 0; i < (SPUZ_BOARD_W * SPUZ_BOARD_H) - 2; i++) {
 			if (p->panels[(i + 1) / SPUZ_BOARD_W][(i + 1) % SPUZ_BOARD_W] < p->panels[i / SPUZ_BOARD_W][i % SPUZ_BOARD_W]) {
 				solved = false;
 				break;
