@@ -7,6 +7,10 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 static SPUZ_Board p;
 static bool Running = true;
 static bool NewGame = true;
@@ -19,6 +23,7 @@ static SDL_Texture* Picture = NULL;
 static SDL_Texture* Arrows = NULL;
 
 void Init();
+void MainLoop();
 void ProcessEvents();
 void Update();
 void RenderPuzzle();
@@ -32,37 +37,45 @@ void Quit(const char* const format, ...);
 int main(int argc, char** argv) {
 	Init();
 
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(MainLoop, 60, 1);
+#else
 	while (Running) {
-		if (NewGame) {
-			/* In the odd event permuting the panels results in a solved puzzle,
-			 * try again until it isn't solved. The permuting function doesn't
-			 * guarantee the puzzle is not in the solved state. */
-			do {
-				SPUZ_Permute(&p, (unsigned)time(NULL));
-			} while (SPUZ_Solved(&p));
-
-			NewGame = 0;
-		}
-		ProcessEvents();
-		if (SpaceHeld) {
-			RenderSolved(false);
-		}
-		else {
-			if (Running) Update();
-			RenderPuzzle();
-		}
-		if (SPUZ_Solved(&p)) {
-			Uint32 endTicks = SDL_GetTicks() + SOLVED_DELAY;
-			while (Running && SDL_GetTicks() < endTicks) {
-				ProcessEvents();
-				RenderSolved(true);
-			}
-			NewGame = 1;
-		}
+		MainLoop();
 	}
+#endif
 
 	Quit(NULL);
 	return 0;
+}
+
+void MainLoop() {
+	if (NewGame) {
+		/* In the odd event permuting the panels results in a solved puzzle,
+		 * try again until it isn't solved. The permuting function doesn't
+		 * guarantee the puzzle is not in the solved state. */
+		do {
+			SPUZ_Permute(&p, (unsigned)time(NULL));
+		} while (SPUZ_Solved(&p));
+
+		NewGame = 0;
+	}
+	ProcessEvents();
+	if (SpaceHeld) {
+		RenderSolved(false);
+	}
+	else {
+		if (Running) Update();
+		RenderPuzzle();
+	}
+	if (SPUZ_Solved(&p)) {
+		Uint32 endTicks = SDL_GetTicks() + SOLVED_DELAY;
+		while (Running && SDL_GetTicks() < endTicks) {
+			ProcessEvents();
+			RenderSolved(true);
+		}
+		NewGame = 1;
+	}
 }
 
 void Init(void) {

@@ -32,7 +32,12 @@ if(MSVC)
 	)
 endif()
 
-if(VCPKG_TOOLCHAIN)
+if(${CMAKE_SYSTEM_NAME} MATCHES Emscripten)
+	set(USE_FLAGS "-s USE_SDL=2 -s USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS=[png,jpg]")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USE_FLAGS} --preload-file '${CMAKE_SOURCE_DIR}/Arrows.png@Arrows.png' --preload-file '${CMAKE_SOURCE_DIR}/Picture.jpg@Picture.jpg'")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${USE_FLAGS}")
+	set(CMAKE_EXECUTABLE_SUFFIX .html)
+elseif(VCPKG_TOOLCHAIN)
 	find_package(SDL2 REQUIRED)
 	find_package(sdl2-image REQUIRED)
 	target_link_libraries(${EXE}
