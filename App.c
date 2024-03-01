@@ -7,11 +7,9 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#endif
-
 static SPUZ_Board p;
+static Uint32 SolvedTicksEnd;
+static bool ShowSolved = false;
 static bool Running = true;
 static bool NewGame = true;
 static Uint16 PressedX = 0;
@@ -34,20 +32,55 @@ void Quit(const char* const format, ...);
 #define BOARD_SIZE (256 * 4)
 #define SOLVED_DELAY 5000
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+
+static EM_BOOL EmscriptenResizeCallback(int eventType, const EmscriptenUiEvent* uiEvent, void* userData) {
+	if (
+		eventType != EMSCRIPTEN_EVENT_RESIZE ||
+		!Window
+	) {
+		return false;
+	}
+
+	SDL_SetWindowSize(Window, uiEvent->windowInnerWidth, uiEvent->windowInnerHeight);
+	return true;
+}
+
 int main(int argc, char** argv) {
 	Init();
 
-#ifdef __EMSCRIPTEN__
-	emscripten_set_main_loop(MainLoop, 60, 1);
-#else
-	while (Running) {
-		MainLoop();
+	if (emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, NULL, false, EmscriptenResizeCallback) < 0 ) {
+		Quit("Failed to set window resizing callback.\n");
 	}
-#endif
+	else {
+		int width = -1, height = -1;
+		width = EM_ASM_INT({ return window.innerWidth; });
+		height = EM_ASM_INT({ return window.innerHeight; });
+		if (width > 0 && height > 0) {
+			SDL_SetWindowSize(Window, width, height);
+		}
+	}
+
+	emscripten_set_main_loop(MainLoop, 60, 1);
 
 	Quit(NULL);
 	return 0;
 }
+
+#else
+int main(int argc, char** argv) {
+	Init();
+
+	while (Running) {
+		MainLoop();
+	}
+
+	Quit(NULL);
+	return 0;
+}
+#endif
 
 void MainLoop() {
 	if (NewGame) {
@@ -58,23 +91,24 @@ void MainLoop() {
 			SPUZ_Permute(&p, (unsigned)time(NULL));
 		} while (SPUZ_Solved(&p));
 
-		NewGame = 0;
+		NewGame = false;
 	}
 	ProcessEvents();
-	if (SpaceHeld) {
-		RenderSolved(false);
+	Update();
+	const bool solved = SPUZ_Solved(&p);
+	if (solved && !ShowSolved) {
+		ShowSolved = true;
+		SolvedTicksEnd = SDL_GetTicks() + SOLVED_DELAY;
+	}
+	if (ShowSolved || SpaceHeld) {
+		RenderSolved(solved);
+		if (ShowSolved && SDL_TICKS_PASSED(SDL_GetTicks(), SolvedTicksEnd)) {
+			ShowSolved = false;
+			NewGame = true;
+		}
 	}
 	else {
-		if (Running) Update();
 		RenderPuzzle();
-	}
-	if (SPUZ_Solved(&p)) {
-		Uint32 endTicks = SDL_GetTicks() + SOLVED_DELAY;
-		while (Running && SDL_GetTicks() < endTicks) {
-			ProcessEvents();
-			RenderSolved(true);
-		}
-		NewGame = 1;
 	}
 }
 
@@ -110,7 +144,8 @@ void Init(void) {
 #define LOADIMG(image, type) \
 	if ((image = IMG_LoadTexture(Renderer, #image "." type)) == NULL) { \
 		Quit("Unable to load \"" #image "." type "\" image:\n%s", SDL_GetError()); \
-	}
+	} \
+	SDL_SetTextureBlendMode(image, SDL_BLENDMODE_BLEND);
 	LOADIMG(Picture, "jpg");
 	LOADIMG(Arrows, "png");
 #undef LOADIMG
@@ -145,7 +180,7 @@ void ProcessEvents(void) {
 				}
 				break;
 			case SDL_QUIT:
-				Running = 0;
+				Running = false;
 				return;
 			default:
 				break;
